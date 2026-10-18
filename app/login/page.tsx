@@ -1,0 +1,202 @@
+
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function setupFarm(user: {
+    id: string;
+    email?: string;
+    user_metadata?: { full_name?: string };
+  }) {
+    const supabase = createClient();
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          full_name: user.user_metadata?.full_name || name || "",
+          village: "",
+          preferred_language: "en",
+        },
+        { onConflict: "id" }
+      );
+
+    if (profileError) throw profileError;
+
+    const { data: farm, error: farmError } = await supabase
+      .from("farms")
+      .select("id")
+      .maybeSingle();
+
+    if (farmError) throw farmError;
+
+    if (!farm) {
+      const { error } = await supabase.from("farms").insert({
+        owner_id: user.id,
+        farm_name: "My Farm",
+        village: "",
+      });
+
+      if (error) throw error;
+    }
+
+    router.replace("/");
+    router.refresh();
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const supabase = createClient();
+
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name },
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.session && data.user) {
+          await setupFarm(data.user);
+        } else {
+          setMessage(
+            "Account created! Check your email to confirm your account, then return here and sign in."
+          );
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+        if (!data.user) throw new Error("Could not load your account.");
+
+        await setupFarm(data.user);
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto max-w-md p-6 sm:py-16">
+      <h1 className="text-3xl font-bold">AgriFin</h1>
+      <p className="mt-2 text-gray-600">
+        Your farm finances, all in one place.
+      </p>
+
+      <div className="mt-8 flex gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setMode("signup");
+            setMessage("");
+          }}
+          className={`flex-1 rounded-lg border p-3 ${
+            mode === "signup" ? "bg-green-700 text-white" : ""
+          }`}
+        >
+          Create account
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode("login");
+            setMessage("");
+          }}
+          className={`flex-1 rounded-lg border p-3 ${
+            mode === "login" ? "bg-green-700 text-white" : ""
+          }`}
+        >
+          Sign in
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {mode === "signup" && (
+          <label className="block">
+            <span className="mb-1 block">Farmer name</span>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border p-3"
+              placeholder="Your full name"
+            />
+          </label>
+        )}
+
+        <label className="block">
+          <span className="mb-1 block">Email</span>
+          <input
+            required
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg border p-3"
+            placeholder="you@example.com"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block">Password</span>
+          <input
+            required
+            type="password"
+            minLength={8}
+            autoComplete={
+              mode === "signup" ? "new-password" : "current-password"
+            }
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-lg border p-3"
+            placeholder="At least 8 characters"
+          />
+        </label>
+
+        <button
+          disabled={busy}
+          className="w-full rounded-lg bg-green-700 p-3 font-semibold text-white disabled:opacity-50"
+        >
+          {busy
+            ? "Please wait..."
+            : mode === "signup"
+              ? "Create account"
+              : "Sign in"}
+        </button>
+      </form>
+
+      {message && (
+        <p role="status" className="mt-5 break-words rounded-lg border p-3">
+          {message}
+        </p>
+      )}
+    </main>
+  );
+}
