@@ -35,24 +35,26 @@ function SignOutButton({ compact = false }: { compact?: boolean }) {
   const label = locale === 'ta' ? 'வெளியேறு' : 'Sign out'
 
   async function handleSignOut() {
-    setBusy(true)
-    setErrorMessage('')
+  setBusy(true)
+  setErrorMessage('')
 
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signOut()
+  try {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signOut()
 
-      if (error) throw error
+    if (error) throw error
 
-      router.replace('/login')
-      router.refresh()
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Could not sign out.',
-      )
-      setBusy(false)
-    }
+    router.replace('/login')
+    router.refresh()
+  } catch (error) {
+    setErrorMessage(
+      error instanceof Error ? error.message : 'Could not sign out.',
+    )
+  } finally {
+    // Always reset the button, whether sign-out succeeds or fails.
+    setBusy(false)
   }
+}
 
   return (
     <div className={compact ? 'flex flex-col items-center' : 'w-full'}>

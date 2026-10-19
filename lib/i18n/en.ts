@@ -4,7 +4,7 @@ export const en = {
     name: 'AgriFin',
     tagline: 'Farm money, made simple',
     skipToContent: 'Skip to main content',
-    prototypeNotice: 'Sample data. Your entries are kept only until you reload the page.',
+    prototypeNotice: 'Your farm records are saved to your Supabase account. Offline use is not available yet.',
   },
   nav: {
     dashboard: 'Home',
