@@ -1,14 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Info, Settings, Tractor } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { Info, LogOut, Settings, Tractor } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { usePreferences } from '@/components/providers/preferences-provider'
 import { LanguageToggle } from '@/components/shared/language-toggle'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, isActive } from './nav-items'
 
 function Logo() {
+
   const { t } = usePreferences()
   return (
     <Link href="/" className="flex items-center gap-2.5 rounded-lg">
@@ -22,6 +25,68 @@ function Logo() {
     </Link>
   )
 }
+
+function SignOutButton({ compact = false }: { compact?: boolean }) {
+  const router = useRouter()
+  const { locale } = usePreferences()
+  const [busy, setBusy] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const label = locale === 'ta' ? 'வெளியேறு' : 'Sign out'
+
+  async function handleSignOut() {
+    setBusy(true)
+    setErrorMessage('')
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+
+      if (error) throw error
+
+      router.replace('/login')
+      router.refresh()
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Could not sign out.',
+      )
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={compact ? 'flex flex-col items-center' : 'w-full'}>
+      <button
+        type="button"
+        onClick={handleSignOut}
+        disabled={busy}
+        aria-label={label}
+        title={label}
+        className={`flex min-h-11 items-center gap-3 rounded-xl border border-border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50 ${
+          compact ? 'size-11 justify-center px-0' : 'w-full'
+        }`}
+      >
+        <LogOut className="size-5 shrink-0" aria-hidden="true" />
+        {!compact && (
+          <span>
+            {busy
+              ? locale === 'ta'
+                ? 'வெளியேறுகிறது...'
+                : 'Signing out...'
+              : label}
+          </span>
+        )}
+      </button>
+
+      {errorMessage && (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          {errorMessage}
+        </p>
+      )}
+    </div>
+  )
+}
+
 
 function SidebarNav() {
   const pathname = usePathname()
@@ -55,6 +120,9 @@ function SidebarNav() {
         </ul>
       </nav>
       <LanguageToggle className="px-2" />
+      <div className="mt-3 px-2">
+        <SignOutButton />
+      </div>
     </aside>
   )
 }
@@ -67,6 +135,10 @@ function MobileTopBar() {
       <Logo />
       <div className="flex items-center gap-1">
         <LanguageToggle />
+        <div className="flex items-center gap-1">
+           <LanguageToggle />
+           <SignOutButton compact />
+        </div>
         <Link
           href="/settings"
           aria-current={isActive(pathname, '/settings') ? 'page' : undefined}
