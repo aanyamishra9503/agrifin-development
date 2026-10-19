@@ -207,7 +207,7 @@ export const en = {
     profileSaved: 'Your details are saved',
     dataTitle: 'Your data',
     dataNotice:
-      'This is an early version. It uses sample data kept in memory. Anything you add is lost when you reload the page.',
+      'Your expenses, sales, and payments are stored in your Supabase database.',
     offlineTitle: 'Offline use',
     offlineNotice:
       'Not available yet. You need an internet connection to open this app. Offline saving will be added in a future version.',
