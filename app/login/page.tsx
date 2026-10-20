@@ -15,47 +15,74 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   async function setupFarm(user: {
-    id: string;
-    email?: string;
-    user_metadata?: { full_name?: string };
-  }) {
-    const supabase = createClient();
+  id: string
+  email?: string
+  user_metadata?: { full_name?: string }
+}) {
+  const supabase = createClient()
 
-    const { error: profileError } = await supabase
+  // Check whether the user's profile already exists.
+  const { data: existingProfile, error: profileReadError } =
+    await supabase
       .from("profiles")
-      .upsert(
-        {
-          id: user.id,
-          full_name: user.user_metadata?.full_name || name || "",
-          village: "",
-          preferred_language: "en",
-        },
-        { onConflict: "id" }
-      );
+      .select("id, full_name")
+      .eq("id", user.id)
+      .maybeSingle()
 
-    if (profileError) throw profileError;
+  if (profileReadError) throw profileReadError
 
-    const { data: farm, error: farmError } = await supabase
+  // Create a profile only if one does not already exist.
+  if (!existingProfile) {
+    const { error: profileInsertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || name || "",
+        village: "",
+        preferred_language: "en",
+      })
+
+    if (profileInsertError) throw profileInsertError
+  } else if (
+    !existingProfile.full_name &&
+    (user.user_metadata?.full_name || name)
+  ) {
+    // Fill in a missing name without overwriting existing settings.
+    const { error: profileUpdateError } = await supabase
+      .from("profiles")
+      .update({
+        full_name: user.user_metadata?.full_name || name,
+      })
+      .eq("id", user.id)
+
+    if (profileUpdateError) throw profileUpdateError
+  }
+
+  // Look for this user's farm specifically.
+  const { data: farm, error: farmError } = await supabase
+    .from("farms")
+    .select("id")
+    .eq("owner_id", user.id)
+    .maybeSingle()
+
+  if (farmError) throw farmError
+
+  // Create a default farm only if the user has none.
+  if (!farm) {
+    const { error: farmInsertError } = await supabase
       .from("farms")
-      .select("id")
-      .maybeSingle();
-
-    if (farmError) throw farmError;
-
-    if (!farm) {
-      const { error } = await supabase.from("farms").insert({
+      .insert({
         owner_id: user.id,
         farm_name: "My Farm",
         village: "",
-      });
+      })
 
-      if (error) throw error;
-    }
-
-    router.replace("/");
-    router.refresh();
+    if (farmInsertError) throw farmInsertError
   }
 
+  router.replace("/")
+  router.refresh()
+}
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
