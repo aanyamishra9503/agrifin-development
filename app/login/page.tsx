@@ -2,11 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,8 +17,6 @@ export default function LoginPage() {
     email?: string;
     user_metadata?: { full_name?: string };
   }) {
-    console.log("[AgriFin Debug] setupFarm started");
-
     const supabase = createClient();
 
     const { data: existingProfile, error: profileReadError } =
@@ -31,8 +27,6 @@ export default function LoginPage() {
         .maybeSingle();
 
     if (profileReadError) throw profileReadError;
-
-    console.log("[AgriFin Debug] profile check completed");
 
     if (!existingProfile) {
       const { error: profileInsertError } = await supabase
@@ -67,8 +61,6 @@ export default function LoginPage() {
 
     if (farmError) throw farmError;
 
-    console.log("[AgriFin Debug] farm check completed");
-
     if (!farm) {
       const { error: farmInsertError } = await supabase
         .from("farms")
@@ -81,9 +73,7 @@ export default function LoginPage() {
       if (farmInsertError) throw farmInsertError;
     }
 
-   console.log("[AgriFin Debug] navigating to dashboard");
-
-   window.location.replace("/");
+    window.location.replace("/");
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -93,8 +83,6 @@ export default function LoginPage() {
 
     setBusy(true);
     setMessage("");
-
-    console.log("[AgriFin Debug] form submitted; mode:", mode);
 
     try {
       const supabase = createClient();
@@ -111,9 +99,7 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data.session && data.user) {
-          console.log("[AgriFin Debug] signup succeeded");
           await setupFarm(data.user);
-          console.log("[AgriFin Debug] setupFarm completed");
         } else {
           setMessage(
             "Account created! Check your email to confirm your account, then return here and sign in."
@@ -127,20 +113,14 @@ export default function LoginPage() {
           });
 
         if (error) throw error;
+
         if (!data.user) {
           throw new Error("Could not load your account.");
         }
 
-        console.log("[AgriFin Debug] sign-in succeeded");
-
-        console.log("[AgriFin Debug] calling setupFarm");
         await setupFarm(data.user);
-
-        console.log("[AgriFin Debug] setupFarm completed");
       }
     } catch (error) {
-      console.error("[AgriFin Debug] login/setup failed:", error);
-
       setMessage(
         error instanceof Error
           ? error.message
@@ -148,7 +128,6 @@ export default function LoginPage() {
       );
     } finally {
       setBusy(false);
-      console.log("[AgriFin Debug] form handler finished");
     }
   }
 
