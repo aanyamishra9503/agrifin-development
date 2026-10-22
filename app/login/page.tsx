@@ -2,11 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,43 +19,68 @@ export default function LoginPage() {
   }) {
     const supabase = createClient();
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .upsert(
-        {
+    const { data: existingProfile, error: profileReadError } =
+      await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+    if (profileReadError) throw profileReadError;
+
+    if (!existingProfile) {
+      const { error: profileInsertError } = await supabase
+        .from("profiles")
+        .insert({
           id: user.id,
           full_name: user.user_metadata?.full_name || name || "",
           village: "",
           preferred_language: "en",
-        },
-        { onConflict: "id" }
-      );
+        });
 
-    if (profileError) throw profileError;
+      if (profileInsertError) throw profileInsertError;
+    } else if (
+      !existingProfile.full_name &&
+      (user.user_metadata?.full_name || name)
+    ) {
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: user.user_metadata?.full_name || name,
+        })
+        .eq("id", user.id);
+
+      if (profileUpdateError) throw profileUpdateError;
+    }
 
     const { data: farm, error: farmError } = await supabase
       .from("farms")
       .select("id")
+      .eq("owner_id", user.id)
       .maybeSingle();
 
     if (farmError) throw farmError;
 
     if (!farm) {
-      const { error } = await supabase.from("farms").insert({
-        owner_id: user.id,
-        farm_name: "My Farm",
-        village: "",
-      });
+      const { error: farmInsertError } = await supabase
+        .from("farms")
+        .insert({
+          owner_id: user.id,
+          farm_name: "My Farm",
+          village: "",
+        });
 
-      if (error) throw error;
+      if (farmInsertError) throw farmInsertError;
     }
 
-    router.replace("/");
-    router.refresh();
+    window.location.replace("/");
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (busy) return;
+
     setBusy(true);
     setMessage("");
 
@@ -83,19 +106,25 @@ export default function LoginPage() {
           );
         }
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
         if (error) throw error;
-        if (!data.user) throw new Error("Could not load your account.");
+
+        if (!data.user) {
+          throw new Error("Could not load your account.");
+        }
 
         await setupFarm(data.user);
       }
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Something went wrong."
+        error instanceof Error
+          ? error.message
+          : "Something went wrong."
       );
     } finally {
       setBusy(false);
@@ -105,6 +134,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto max-w-md p-6 sm:py-16">
       <h1 className="text-3xl font-bold">AgriFin</h1>
+
       <p className="mt-2 text-gray-600">
         Your farm finances, all in one place.
       </p>
@@ -171,7 +201,9 @@ export default function LoginPage() {
             type="password"
             minLength={8}
             autoComplete={
-              mode === "signup" ? "new-password" : "current-password"
+              mode === "signup"
+                ? "new-password"
+                : "current-password"
             }
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -181,6 +213,7 @@ export default function LoginPage() {
         </label>
 
         <button
+          type="submit"
           disabled={busy}
           className="w-full rounded-lg bg-green-700 p-3 font-semibold text-white disabled:opacity-50"
         >
@@ -193,7 +226,10 @@ export default function LoginPage() {
       </form>
 
       {message && (
-        <p role="status" className="mt-5 break-words rounded-lg border p-3">
+        <p
+          role="status"
+          className="mt-5 break-words rounded-lg border p-3"
+        >
           {message}
         </p>
       )}
