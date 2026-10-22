@@ -15,78 +15,87 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   async function setupFarm(user: {
-  id: string
-  email?: string
-  user_metadata?: { full_name?: string }
-}) {
-  const supabase = createClient()
+    id: string;
+    email?: string;
+    user_metadata?: { full_name?: string };
+  }) {
+    console.log("[AgriFin Debug] setupFarm started");
 
-  // Check whether the user's profile already exists.
-  const { data: existingProfile, error: profileReadError } =
-    await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("id", user.id)
-      .maybeSingle()
+    const supabase = createClient();
 
-  if (profileReadError) throw profileReadError
+    const { data: existingProfile, error: profileReadError } =
+      await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("id", user.id)
+        .maybeSingle();
 
-  // Create a profile only if one does not already exist.
-  if (!existingProfile) {
-    const { error: profileInsertError } = await supabase
-      .from("profiles")
-      .insert({
-        id: user.id,
-        full_name: user.user_metadata?.full_name || name || "",
-        village: "",
-        preferred_language: "en",
-      })
+    if (profileReadError) throw profileReadError;
 
-    if (profileInsertError) throw profileInsertError
-  } else if (
-    !existingProfile.full_name &&
-    (user.user_metadata?.full_name || name)
-  ) {
-    // Fill in a missing name without overwriting existing settings.
-    const { error: profileUpdateError } = await supabase
-      .from("profiles")
-      .update({
-        full_name: user.user_metadata?.full_name || name,
-      })
-      .eq("id", user.id)
+    console.log("[AgriFin Debug] profile check completed");
 
-    if (profileUpdateError) throw profileUpdateError
-  }
+    if (!existingProfile) {
+      const { error: profileInsertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || name || "",
+          village: "",
+          preferred_language: "en",
+        });
 
-  // Look for this user's farm specifically.
-  const { data: farm, error: farmError } = await supabase
-    .from("farms")
-    .select("id")
-    .eq("owner_id", user.id)
-    .maybeSingle()
+      if (profileInsertError) throw profileInsertError;
+    } else if (
+      !existingProfile.full_name &&
+      (user.user_metadata?.full_name || name)
+    ) {
+      const { error: profileUpdateError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: user.user_metadata?.full_name || name,
+        })
+        .eq("id", user.id);
 
-  if (farmError) throw farmError
+      if (profileUpdateError) throw profileUpdateError;
+    }
 
-  // Create a default farm only if the user has none.
-  if (!farm) {
-    const { error: farmInsertError } = await supabase
+    const { data: farm, error: farmError } = await supabase
       .from("farms")
-      .insert({
-        owner_id: user.id,
-        farm_name: "My Farm",
-        village: "",
-      })
+      .select("id")
+      .eq("owner_id", user.id)
+      .maybeSingle();
 
-    if (farmInsertError) throw farmInsertError
+    if (farmError) throw farmError;
+
+    console.log("[AgriFin Debug] farm check completed");
+
+    if (!farm) {
+      const { error: farmInsertError } = await supabase
+        .from("farms")
+        .insert({
+          owner_id: user.id,
+          farm_name: "My Farm",
+          village: "",
+        });
+
+      if (farmInsertError) throw farmInsertError;
+    }
+
+    console.log("[AgriFin Debug] navigating to dashboard");
+
+    router.replace("/");
+    router.refresh();
   }
 
-  router.replace("/")
-  router.refresh()
-}
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (busy) return;
+
     setBusy(true);
     setMessage("");
+
+    console.log("[AgriFin Debug] form submitted; mode:", mode);
 
     try {
       const supabase = createClient();
@@ -103,35 +112,51 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data.session && data.user) {
+          console.log("[AgriFin Debug] signup succeeded");
           await setupFarm(data.user);
+          console.log("[AgriFin Debug] setupFarm completed");
         } else {
           setMessage(
             "Account created! Check your email to confirm your account, then return here and sign in."
           );
         }
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
         if (error) throw error;
-        if (!data.user) throw new Error("Could not load your account.");
+        if (!data.user) {
+          throw new Error("Could not load your account.");
+        }
 
+        console.log("[AgriFin Debug] sign-in succeeded");
+
+        console.log("[AgriFin Debug] calling setupFarm");
         await setupFarm(data.user);
+
+        console.log("[AgriFin Debug] setupFarm completed");
       }
     } catch (error) {
+      console.error("[AgriFin Debug] login/setup failed:", error);
+
       setMessage(
-        error instanceof Error ? error.message : "Something went wrong."
+        error instanceof Error
+          ? error.message
+          : "Something went wrong."
       );
     } finally {
       setBusy(false);
+      console.log("[AgriFin Debug] form handler finished");
     }
   }
 
   return (
     <main className="mx-auto max-w-md p-6 sm:py-16">
       <h1 className="text-3xl font-bold">AgriFin</h1>
+
       <p className="mt-2 text-gray-600">
         Your farm finances, all in one place.
       </p>
@@ -198,7 +223,9 @@ export default function LoginPage() {
             type="password"
             minLength={8}
             autoComplete={
-              mode === "signup" ? "new-password" : "current-password"
+              mode === "signup"
+                ? "new-password"
+                : "current-password"
             }
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -208,6 +235,7 @@ export default function LoginPage() {
         </label>
 
         <button
+          type="submit"
           disabled={busy}
           className="w-full rounded-lg bg-green-700 p-3 font-semibold text-white disabled:opacity-50"
         >
@@ -220,7 +248,10 @@ export default function LoginPage() {
       </form>
 
       {message && (
-        <p role="status" className="mt-5 break-words rounded-lg border p-3">
+        <p
+          role="status"
+          className="mt-5 break-words rounded-lg border p-3"
+        >
           {message}
         </p>
       )}
