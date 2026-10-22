@@ -81,10 +81,9 @@ export default function LoginPage() {
       if (farmInsertError) throw farmInsertError;
     }
 
-    console.log("[AgriFin Debug] navigating to dashboard");
+   console.log("[AgriFin Debug] navigating to dashboard");
 
-    router.replace("/");
-    router.refresh();
+   window.location.replace("/");
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
