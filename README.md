@@ -214,13 +214,3 @@ These items describe potential improvements and should not be interpreted as alr
 AgriFin aims to make agricultural financial record-keeping simpler and more accessible by giving farmers a central place to track operational costs, sales, payments, and harvest-cycle financial performance.
 
 The project is being developed as a practical application prototype, with an emphasis on usability, transparent financial calculations, and a technology stack that supports future expansion.
-
-## Author
-
-**Aanya Mishra**
-
-GitHub: [aanyamishra9503](https://github.com/aanyamishra9503)
-
-## License
-
-No open-source license has been specified yet. All rights and permissions remain with the respective copyright holder unless a license is added to the repository.
