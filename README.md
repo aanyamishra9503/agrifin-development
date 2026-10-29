@@ -142,3 +142,7 @@ The application can be accessed through its deployed URL when the relevant deplo
 AgriFin aims to make agricultural financial record-keeping simpler and more accessible by giving farmers a central place to track operational costs, sales, payments, and harvest-cycle financial performance.
 
 The project is being developed as a practical application prototype, with an emphasis on usability, transparent financial calculations, and a technology stack that supports future expansion.
+
+# Created By:-
+Aanya Mishra
+@aanyamishra9503
