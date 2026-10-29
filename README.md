@@ -129,54 +129,6 @@ The exact relationships and access policies are defined by the database schema a
 | Settings | Application settings and preferences |
 | Login | Account registration and sign-in |
 
-## Getting Started
-
-### Prerequisites
-
-Install the following before running the project locally:
-
-- Node.js
-- pnpm through Corepack, or a compatible package-manager setup
-- Git
-- A Supabase project with the required database schema and authentication configuration
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/aanyamishra9503/agrifin-development.git
-cd agrifin-development
-```
-
-### 2. Install dependencies
-
-```bash
-corepack pnpm install
-```
-
-### 3. Configure environment variables
-
-Create a `.env.local` file in the project root and configure the required Supabase credentials:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
-```
-
-Replace the example values with the appropriate credentials from your own Supabase project.
-
-Do not commit `.env.local`, service-role keys, database passwords, or other secrets to GitHub.
-
-### 4. Start the development server
-
-```bash
-corepack pnpm dev
-```
-
-Open the local address displayed by Next.js, normally:
-
-`http://localhost:3000`
-
-The application also requires the appropriate Supabase database tables, policies, and authentication settings to be configured.
 
 ## Deployment
 
@@ -184,30 +136,6 @@ AgriFin is deployed through Vercel and uses Supabase for hosted authentication a
 
 The application can be accessed through its deployed URL when the relevant deployment is available and publicly accessible. Production deployment and authentication reliability should be verified before treating the application as a release-ready service.
 
-## Current Development Status
-
-The current prototype includes the main dashboard, crop management, expense tracking, sales tracking, payment tracking, reporting views, and a Supabase-backed data workflow.
-
-The following areas remain under development or require further validation:
-
-- **Authentication reliability:** Investigating an intermittent issue where the first sign-in attempt may return the user to the login page, while refreshing and retrying can allow access.
-- **Language switching:** Reviewing a duplicate English/Tamil language toggle in the interface. Full translation coverage requires separate verification.
-- **Offline functionality:** Reliable offline record creation, local storage, and later synchronisation have not yet been established.
-- **Field testing:** Further testing with intended users is needed to evaluate usability and suitability for agricultural communities.
-- **Data security:** Database access policies and isolation between different users' farm records must be verified before wider release.
-
-## Future Scope
-
-Planned areas for future development include:
-
-- More complete Tamil and regional-language support.
-- Improved accessibility for users with limited digital literacy.
-- Offline-first data entry and synchronisation when connectivity returns.
-- More detailed crop-wise and harvest-cycle-wise financial analysis.
-- Additional testing with farmers and other intended users.
-- Improved authentication, error handling, and data-security validation.
-
-These items describe potential improvements and should not be interpreted as already implemented features.
 
 ## Project Objective
 
